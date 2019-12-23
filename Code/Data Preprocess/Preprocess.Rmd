@@ -1,0 +1,67 @@
+---
+title: "Preprocess"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list=ls())
+library(preprocessCore)
+library(limma)
+```
+
+```{r}
+allSamplesSC1and2=read.csv("allSamplesSC1and2.csv",stringsAsFactors = FALSE) #GA数据
+anoSC2=read.csv("anoSC2_v20_nokey.csv",stringsAsFactors = FALSE) #所有信息
+load("HTA20_RMA.RData") #eset_HTA20
+load("HuGene21ST_RMA.RData") #eset_HuGene21ST
+```
+
+```{r}
+#cgenes = c(rownames(eset_HuGene21ST),rownames(eset_HTA20))
+cgenes = c(rownames(eset_HuGene21ST))
+
+cgenes=names(table(cgenes)[table(cgenes)==1])
+
+#esetSC2 = cbind(eset_HuGene21ST[cgenes,],eset_HTA20[cgenes,])
+esetSC2 = eset_HuGene21ST[cgenes,]
+
+esetSC2
+```
+
+```{r}
+# data normalization
+esetSC2 = data.matrix(esetSC2)
+esetSC2 = normalize.quantiles(esetSC2)
+colnames(esetSC2) = c(colnames(eset_HuGene21ST))
+rownames(esetSC2) = cgenes
+write.table(esetSC2, file = 'esetSC2_normalized.csv', sep=',')
+```
+
+
+
+```{r}
+#extract gestatioan age value for all samples used in analysis
+ga=allSamplesSC1and2$GA[match(colnames(esetSC2),allSamplesSC1and2$SampleID)]
+
+#remove platform effect and GA effect 
+esetSC2 = removeBatchEffect(esetSC2,covariates=cbind(ga,ga^2))
+
+
+esetSC23 = as.data.frame(esetSC2)
+
+#keep only data from samples involved in this subchallenge 
+#esetSC2 = esetSC2[,anoSC2$SampleID]
+save(anoSC2,esetSC2,file="eset_SC2_v20.RData")
+
+
+```
+
+
+```{r}
+write.table(esetSC2, file = 'esetSC2_remove_effect.csv', sep=',')
+
+```
